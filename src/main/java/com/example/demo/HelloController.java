@@ -8,6 +8,6 @@ public class HelloController {
 
     @GetMapping("/")
     public String hello() {
-        return "DevOps Java App Running! 🚀";
+        return "DevOps Java App is LIVE on AWS! V2 😎";
     }
 }
