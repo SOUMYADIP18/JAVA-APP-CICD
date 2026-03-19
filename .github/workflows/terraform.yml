@@ -2,7 +2,9 @@ name: 'Terraform Infrastructure Pipeline'
 
 on:
   push:
-    branches: [ "main" ] # This tells GitHub to run this pipeline every time you push to the main branch
+    paths:
+      - 'main.tf'
+      - '.github/workflows/terraform.yml' #which tells it to only run if main.tf changes
 
 jobs:
   terraform:

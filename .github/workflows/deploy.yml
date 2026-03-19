@@ -2,7 +2,9 @@ name: CI/CD Pipeline for Java App
 
 on:
   push:
-    branches: [ "main" ] # This triggers the pipeline every time you push to main
+    paths-ignore:
+      - 'main.tf'
+      - '.github/workflows/terraform.yml' #which tells it to run for Java code, but ignore Terraform files
 
 jobs:
   build-and-deploy:

@@ -20,7 +20,7 @@ provider "aws" {
 
 # 1. Create the Security Group (Firewall Rules)
 resource "aws_security_group" "java_app_sg" {
-  name        = "java-app-security-group"
+  name        = "java-app-security-group-v2"
   description = "Allow SSH and Port 8080"
 
   # Allow SSH (Port 22)
