@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soumy's Cafe | Online Ordering</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans antialiased">
+
+    <header class="bg-amber-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto p-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">☕ Soumy's Cafe</h1>
+                <p class="text-amber-200 text-sm">Freshly brewed & cooked to order</p>
+            </div>
+            <button onclick="toggleCart()" class="bg-amber-800 hover:bg-amber-900 px-6 py-3 rounded-full font-bold transition flex items-center shadow-lg">
+                🛒 Cart (<span id="cart-count">0</span>) - ₹<span id="cart-total">0</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+        
+        <div class="lg:col-span-2 space-y-8" id="menu-container">
+            <h2 class="text-2xl font-bold text-stone-400 animate-pulse">Loading today's fresh menu...</h2>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-stone-200 h-fit sticky top-28" id="cart-section">
+            <h2 class="text-2xl font-bold border-b border-stone-200 pb-4 mb-4 text-amber-700">Your Order</h2>
+            
+            <ul id="cart-items" class="space-y-4 mb-6 text-stone-600">
+                <li class="italic text-center text-stone-400">Your cart is empty. Add some delicious food!</li>
+            </ul>
+
+            <div class="border-t border-stone-200 pt-4 mb-6">
+                <div class="flex justify-between font-bold text-xl">
+                    <span>Total:</span>
+                    <span>₹<span id="checkout-total">0</span></span>
+                </div>
+            </div>
+
+            <button onclick="submitOrder()" id="checkout-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                Place Order Securely
+            </button>
+            <p id="order-status" class="text-center mt-4 font-bold hidden"></p>
+        </div>
+    </div>
+
+    <script>
+        let cart = [];
+
+        // 1. Fetch the menu from Spring Boot when the page loads
+        window.onload = () => {
+            fetch('/api/cafe/menu')
+                .then(response => response.json())
+                .then(data => renderMenu(data))
+                .catch(err => document.getElementById('menu-container').innerHTML = '<p class="text-red-500">Failed to load menu. Is the server running?</p>');
+        };
+
+        // 2. Build the HTML for the menu dynamically
+        function renderMenu(menuData) {
+            const container = document.getElementById('menu-container');
+            container.innerHTML = ''; // Clear loading text
+
+            for (const [category, items] of Object.entries(menuData)) {
+                let sectionHTML = `
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-extrabold text-stone-800 border-b-2 border-amber-500 pb-2 mb-6">${category}</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                `;
+
+                items.forEach(item => {
+                    // Escape quotes for the function call
+                    const safeName = item.name.replace(/'/g, "\\'");
+                    sectionHTML += `
+                        <div class="bg-white rounded-xl shadow-md p-6 border border-stone-100 hover:shadow-lg transition">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-xl font-bold text-stone-700">${item.name}</h3>
+                                <span class="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-sm">₹${item.price}</span>
+                            </div>
+                            <p class="text-stone-500 text-sm mb-4 h-10">${item.description}</p>
+                            <button onclick="addToCart('${safeName}', ${item.price})" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition">
+                                + Add to Order
+                            </button>
+                        </div>
+                    `;
+                });
+
+                sectionHTML += `</div></div>`;
+                container.innerHTML += sectionHTML;
+            }
+        }
+
+        // 3. Handle Cart Logic
+        function addToCart(name, price) {
+            cart.push({ name, price });
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const cartItemsList = document.getElementById('cart-items');
+            const cartCount = document.getElementById('cart-count');
+            const cartTotal = document.getElementById('cart-total');
+            const checkoutTotal = document.getElementById('checkout-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+
+            cartCount.innerText = cart.length;
+            
+            let total = 0;
+            if (cart.length === 0) {
+                cartItemsList.innerHTML = '<li class="italic text-center text-stone-400">Your cart is empty.</li>';
+                checkoutBtn.disabled = true;
+            } else {
+                cartItemsList.innerHTML = '';
+                cart.forEach((item, index) => {
+                    total += item.price;
+                    cartItemsList.innerHTML += `
+                        <div class="flex justify-between items-center bg-stone-50 p-3 rounded-lg border border-stone-200">
+                            <span class="font-semibold">${item.name}</span>
+                            <div class="flex items-center gap-4">
+                                <span class="text-amber-700 font-bold">₹${item.price}</span>
+                                <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-sm font-bold">✕</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                checkoutBtn.disabled = false;
+            }
+            
+            cartTotal.innerText = total;
+            checkoutTotal.innerText = total;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        // 4. Send the Order to Spring Boot
+        function submitOrder() {
+            const statusText = document.getElementById('order-status');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            checkoutBtn.innerText = "Processing...";
+            checkoutBtn.disabled = true;
+
+            fetch('/api/cafe/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: cart, total: document.getElementById('checkout-total').innerText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                cart = [];
+                updateCartUI();
+                statusText.innerText = "✅ " + data.message;
+                statusText.classList.remove('hidden', 'text-red-500');
+                statusText.classList.add('text-green-600');
+                checkoutBtn.innerText = "Place Order Securely";
+            })
+            .catch(error => {
+                statusText.innerText = "❌ Error placing order. Please try again.";
+                statusText.classList.remove('hidden', 'text-green-600');
+                statusText.classList.add('text-red-500');
+                checkoutBtn.innerText = "Place Order Securely";
+                checkoutBtn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
