@@ -167,3 +167,10 @@ output "alb_dns_name" {
   description = "The permanent URL of your Load Balancer"
   value       = aws_lb.java_app_alb.dns_name
 }
+# 8. AWS SSM Parameter Store (The Secret Vault)
+resource "aws_ssm_parameter" "ec2_public_ip" {
+  name        = "/java-app/production/ec2-public-ip"
+  description = "The public IP of the Java App EC2 instance"
+  type        = "String"
+  value       = aws_instance.java_app_server.public_ip
+}
