@@ -17,6 +17,12 @@ terraform {
 provider "aws" {
   region = "ap-south-1"
 }
+# Find the SSL Certificate we just created
+data "aws_acm_certificate" "my_cert" {
+  domain      = "mydevopslab.online"
+  statuses    = ["ISSUED"]
+  most_recent = true
+}
 # 1. Get your default Virtual Private Cloud (VPC)
 data "aws_vpc" "default" {
   default = true
@@ -39,6 +45,14 @@ resource "aws_security_group" "alb_sg" {
   ingress {
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  # Allow HTTPS traffic
+  ingress {
+    description = "HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -81,6 +95,24 @@ resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.java_app_alb.arn
   port              = "80"
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+# The Secure HTTPS Listener
+resource "aws_lb_listener" "https_listener" {
+  load_balancer_arn = aws_lb.java_app_alb.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = data.aws_acm_certificate.my_cert.arn
 
   default_action {
     type             = "forward"
