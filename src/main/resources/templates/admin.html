@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Dashboard | Live Orders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 font-sans antialiased h-screen flex flex-col">
+
+    <header class="bg-stone-800 border-b border-stone-700 p-6 shadow-md flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight text-amber-500">Live Kitchen Display</h1>
+            <p id="connection-status" class="text-red-400 font-mono text-sm mt-1">🔴 Disconnected from Server</p>
+        </div>
+        <div class="text-right">
+            <p class="text-stone-400">Total Active Orders</p>
+            <p id="active-count" class="text-4xl font-black text-white">0</p>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 overflow-x-auto">
+        <div id="order-grid" class="flex gap-6 pb-4 items-start">
+            <div id="waiting-msg" class="text-stone-500 italic w-full text-center mt-20 text-xl animate-pulse">
+                Waiting for incoming orders...
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let stompClient = null;
+        let orderCount = 0;
+
+        // 1. Connect to the Spring Boot WebSocket Server
+        function connect() {
+            // Point SockJS to the endpoint we configured in WebSocketConfig.java
+            let socket = new SockJS('/ws-cafe');
+            stompClient = Stomp.over(socket);
+            
+            // Turn off heavy STOMP debugging logs in the console
+            stompClient.debug = null;
+
+            stompClient.connect({}, function (frame) {
+                document.getElementById('connection-status').innerText = "🟢 Connected & Listening";
+                document.getElementById('connection-status').className = "text-green-400 font-mono text-sm mt-1";
+                
+                // 2. Subscribe to the "Radio Channel"
+                stompClient.subscribe('/topic/orders', function (message) {
+                    // This triggers the millisecond an order is placed!
+                    showIncomingOrder(JSON.parse(message.body));
+                });
+            }, function(error) {
+                document.getElementById('connection-status').innerText = "🔴 Connection Lost - Retrying...";
+                document.getElementById('connection-status').className = "text-red-400 font-mono text-sm mt-1";
+                setTimeout(connect, 5000);
+            });
+        }
+
+        // 3. Render the order ticket on the screen
+        function showIncomingOrder(order) {
+            document.getElementById('waiting-msg').style.display = 'none';
+            orderCount++;
+            document.getElementById('active-count').innerText = orderCount;
+
+            const grid = document.getElementById('order-grid');
+            
+            // Build the list of items
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                itemsHtml += `<li class="border-b border-stone-600 py-2 flex justify-between">
+                                <span>1x ${item.name}</span>
+                              </li>`;
+            });
+
+            // Build the actual ticket card
+            const ticketHtml = `
+                <div id="${order.orderId}" class="bg-stone-800 rounded-xl shadow-2xl border-t-8 border-amber-500 w-80 flex-shrink-0 animate-[pulse_1s_ease-in-out]">
+                    <div class="p-4 border-b border-stone-700 bg-stone-800 rounded-t-xl flex justify-between items-center">
+                        <h3 class="font-black text-xl">#${order.orderId}</h3>
+                        <span class="bg-amber-500 text-stone-900 text-xs font-bold px-2 py-1 rounded animate-pulse">NEW</span>
+                    </div>
+                    <div class="p-4 bg-stone-700">
+                        <ul class="font-mono text-sm mb-4">
+                            ${itemsHtml}
+                        </ul>
+                        <p class="text-right text-green-400 font-bold">Total: ₹${order.total}</p>
+                    </div>
+                    <button onclick="markDone('${order.orderId}')" class="w-full bg-stone-600 hover:bg-green-600 text-white font-bold py-3 rounded-b-xl transition-colors">
+                        Mark as Ready ✓
+                    </button>
+                </div>
+            `;
+            
+            // Add the new ticket to the front of the line
+            grid.insertAdjacentHTML('afterbegin', ticketHtml);
+        }
+
+        // 4. Remove the ticket when the chef clicks 'Mark as Ready'
+        function markDone(orderId) {
+            document.getElementById(orderId).remove();
+            orderCount--;
+            document.getElementById('active-count').innerText = orderCount;
+            if(orderCount === 0) {
+                document.getElementById('waiting-msg').style.display = 'block';
+            }
+        }
+
+        // Start listening the moment the dashboard opens
+        window.onload = connect;
+    </script>
+</body>
+</html>

@@ -8,7 +8,12 @@ public class WebController {
 
     @GetMapping("/")
     public String showDashboard() {
-        // This tells Spring Boot to look for a file named "dashboard.html"
         return "dashboard"; 
+    }
+
+    // NEW: The secret route for the kitchen staff
+    @GetMapping("/admin")
+    public String showAdmin() {
+        return "admin"; 
     }
 }
