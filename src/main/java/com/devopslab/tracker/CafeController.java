@@ -25,7 +25,7 @@ public class CafeController {
         
         menu.put("Gourmet Fast Food", Arrays.asList(
             createItem("Artisan Cheeseburger", 250, "Juicy grilled patty with fresh lettuce, tomato, and melted cheese.", "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80"),
-            createItem("Wood-Fired Margherita", 350, "Authentic crust with fresh basil and mozzarella.", "https://images.unsplash.com/photo-1604068549290-dea0e4a30536?w=500&q=80"),
+            createItem("Wood-Fired Margherita", 350, "Authentic crust with fresh basil and mozzarella.", "https://images.unsplash.com/photo-1513104890d38-7c7f4b2f4c47?w=500&q=80"),
             createItem("Truffle Fries", 150, "Crispy golden fries tossed in truffle oil and parmesan.", "https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=500&q=80")
         ));
         
